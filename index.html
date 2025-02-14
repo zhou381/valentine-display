@@ -2,9 +2,24 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 添加强制横屏相关的 meta 标签 -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>情人节快乐</title>
     <style>
+        /* 强制横屏样式 */
+        @media screen and (orientation: portrait) {
+            html {
+                width: 100vh;
+                height: 100vw;
+                transform: rotate(90deg);
+                transform-origin: 50% 50%;
+                position: fixed;
+                top: 0;
+                left: 0;
+            }
+        }
+
         body {
             margin: 0;
             overflow: hidden;
@@ -13,6 +28,8 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+            width: 100%;
+            height: 100%;
         }
         canvas {
             display: block;
@@ -31,6 +48,7 @@
             text-align: center;
             pointer-events: none;
             z-index: 1;
+            white-space: nowrap;
         }
         .floating-hearts {
             position: fixed;
@@ -58,6 +76,33 @@
     <div id="floating-hearts"></div>
     <canvas id="canvas"></canvas>
     <script>
+        // 尝试请求全屏并锁定横屏
+        function requestFullScreenAndLandscape() {
+            const element = document.documentElement;
+            
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+
+            // 尝试锁定横屏
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(function(error) {
+                    console.log('横屏锁定失败:', error);
+                });
+            }
+        }
+
+        // 监听页面加载完成和点击事件来触发横屏
+        document.addEventListener('DOMContentLoaded', requestFullScreenAndLandscape);
+        document.addEventListener('click', requestFullScreenAndLandscape);
+        document.addEventListener('touchstart', requestFullScreenAndLandscape);
+
         function createFloatingHearts() {
             const container = document.getElementById('floating-hearts');
             const screenWidth = window.innerWidth;
