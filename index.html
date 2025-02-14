@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <!-- 添加强制横屏相关的 meta 标签 -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>情人节快乐</title>
@@ -20,23 +19,41 @@
             }
         }
 
-        body {
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             overflow: hidden;
             background: black;
             touch-action: manipulation;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-            width: 100%;
-            height: 100%;
+            position: fixed;
         }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
         canvas {
             display: block;
             position: fixed;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
         }
+
         .mobile-hint {
             position: fixed;
             top: 20px;
@@ -50,6 +67,7 @@
             z-index: 1;
             white-space: nowrap;
         }
+
         .floating-hearts {
             position: fixed;
             width: 100%;
@@ -57,11 +75,13 @@
             pointer-events: none;
             z-index: 1;
         }
+
         @keyframes float {
             0% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-20px) rotate(180deg); }
             100% { transform: translateY(0) rotate(360deg); }
         }
+
         .heart {
             position: absolute;
             color: #ff69b4;
@@ -69,39 +89,87 @@
             animation: float 3s ease-in-out infinite;
             opacity: 0.6;
         }
+
+        #startButton {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #ff69b4;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        #startButton:hover {
+            background: #ff1493;
+        }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
-    <div class="mobile-hint">点击屏幕任意位置可以发射烟花</div>
-    <div id="floating-hearts"></div>
-    <canvas id="canvas"></canvas>
+    <button id="startButton">点击开始全屏体验</button>
+    <div class="mobile-hint hidden">点击屏幕任意位置可以发射烟花</div>
+    <div id="floating-hearts" class="hidden"></div>
+    <canvas id="canvas" class="hidden"></canvas>
     <script>
-        // 尝试请求全屏并锁定横屏
-        function requestFullScreenAndLandscape() {
-            const element = document.documentElement;
-            
-            if (element.requestFullscreen) {
-                element.requestFullscreen();
-            } else if (element.webkitRequestFullscreen) {
-                element.webkitRequestFullscreen();
-            } else if (element.mozRequestFullScreen) {
-                element.mozRequestFullScreen();
-            } else if (element.msRequestFullscreen) {
-                element.msRequestFullscreen();
-            }
+        const startButton = document.getElementById('startButton');
+        const mobileHint = document.querySelector('.mobile-hint');
+        const floatingHearts = document.getElementById('floating-hearts');
+        const canvas = document.getElementById('canvas');
 
-            // 尝试锁定横屏
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(function(error) {
-                    console.log('横屏锁定失败:', error);
-                });
+        // 处理全屏和横屏
+        async function enterFullscreenMode() {
+            try {
+                // 请求全屏
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    await document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    await document.documentElement.msRequestFullscreen();
+                }
+
+                // 锁定横屏
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+
+                // 隐藏开始按钮，显示其他元素
+                startButton.classList.add('hidden');
+                mobileHint.classList.remove('hidden');
+                floatingHearts.classList.remove('hidden');
+                canvas.classList.remove('hidden');
+
+                // 初始化动画
+                initializeAnimation();
+            } catch (error) {
+                console.error('无法进入全屏模式:', error);
+                // 即使失败也继续显示内容
+                startButton.classList.add('hidden');
+                mobileHint.classList.remove('hidden');
+                floatingHearts.classList.remove('hidden');
+                canvas.classList.remove('hidden');
+                initializeAnimation();
             }
         }
 
-        // 监听页面加载完成和点击事件来触发横屏
-        document.addEventListener('DOMContentLoaded', requestFullScreenAndLandscape);
-        document.addEventListener('click', requestFullScreenAndLandscape);
-        document.addEventListener('touchstart', requestFullScreenAndLandscape);
+        // 监听开始按钮点击
+        startButton.addEventListener('click', enterFullscreenMode);
+
+        function initializeAnimation() {
+            createFloatingHearts();
+            resizeCanvas();
+            animate();
+        }
 
         function createFloatingHearts() {
             const container = document.getElementById('floating-hearts');
@@ -121,16 +189,13 @@
             }
         }
 
-        createFloatingHearts();
-
-        const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
-        resizeCanvas();
+
         window.addEventListener('resize', resizeCanvas);
 
         class HeartParticle {
@@ -193,7 +258,6 @@
                 ctx.rotate(this.rotation);
                 ctx.scale(this.currentSize / this.maxSize, this.currentSize / this.maxSize);
                 
-                // 绘制爱心
                 ctx.beginPath();
                 ctx.fillStyle = `hsla(${this.hue}, 100%, ${this.brightness}%, ${this.alpha})`;
                 ctx.shadowBlur = 15;
@@ -205,7 +269,6 @@
                 ctx.bezierCurveTo(-d*2, d/3, -d, -d, 0, d);
                 ctx.fill();
 
-                // 添加文字
                 const fontSize = this.maxSize * 0.8;
                 ctx.font = `${fontSize}px "Microsoft YaHei", sans-serif`;
                 ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
@@ -351,7 +414,6 @@
             e.preventDefault();
         }, { passive: false });
 
-        animate();
     </script>
 </body>
 </html>
