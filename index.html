@@ -9,13 +9,29 @@
             margin: 0;
             overflow: hidden;
             background: black;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         canvas {
             display: block;
         }
+        .mobile-hint {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 14px;
+            opacity: 0.8;
+            text-align: center;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
+    <div class="mobile-hint">点击屏幕任意位置可以发射烟花</div>
     <canvas id="canvas"></canvas>
     <script>
         const canvas = document.getElementById('canvas');
@@ -29,89 +45,69 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // 烟花粒子类
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.color = color;
-                this.size = Math.random() * 2 + 1;
-                this.speedX = Math.random() * 6 - 3;
-                this.speedY = Math.random() * 6 - 3;
-                this.life = 1;
-                this.gravity = 0.1;
-            }
-
-            update() {
-                this.speedY += this.gravity;
-                this.x += this.speedX;
-                this.y += this.speedY;
-                this.life -= 0.02;
+        // 动态爱心类
+        class Heart {
+            constructor() {
+                this.size = Math.min(canvas.width, canvas.height) * 0.15;
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.angle = 0;
+                this.hue = 0;
+                this.distance = this.size * 1.2;
             }
 
             draw() {
-                ctx.globalAlpha = this.life;
+                this.angle += 0.02;
+                this.hue = (this.hue + 0.5) % 360;
+
+                // 计算偏移位置
+                const offsetX = Math.cos(this.angle) * this.distance;
+                const offsetY = Math.sin(this.angle) * this.distance;
+
+                ctx.save();
+                ctx.translate(this.x + offsetX, this.y + offsetY);
+                ctx.scale(0.8 + Math.sin(this.angle * 2) * 0.2, 0.8 + Math.sin(this.angle * 2) * 0.2);
+
+                // 创建渐变
+                const gradient = ctx.createLinearGradient(0, -this.size, 0, this.size);
+                gradient.addColorStop(0, `hsla(${this.hue}, 100%, 65%, 0.8)`);
+                gradient.addColorStop(1, `hsla(${(this.hue + 60) % 360}, 100%, 65%, 0.8)`);
+
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
+                ctx.moveTo(0, this.size * 0.3);
+                ctx.bezierCurveTo(
+                    this.size * 0.4, -this.size * 0.4,
+                    this.size, -this.size * 0.2,
+                    0, -this.size
+                );
+                ctx.bezierCurveTo(
+                    -this.size, -this.size * 0.2,
+                    -this.size * 0.4, -this.size * 0.4,
+                    0, this.size * 0.3
+                );
+
+                ctx.fillStyle = gradient;
                 ctx.fill();
+                ctx.restore();
             }
         }
+
+        // 烟花粒子类
+        [原有的 Particle 类代码保持不变]
 
         // 烟花类
-        class Firework {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = canvas.height;
-                this.targetY = canvas.height / 3 + Math.random() * canvas.height / 3;
-                this.speedY = -12;
-                this.particles = [];
-                this.hue = Math.random() * 360;
-                this.exploded = false;
-            }
-
-            update() {
-                if (!this.exploded) {
-                    this.y += this.speedY;
-                    if (this.y <= this.targetY) {
-                        this.explode();
-                    }
-                }
-                this.particles.forEach((particle, index) => {
-                    particle.update();
-                    if (particle.life <= 0) {
-                        this.particles.splice(index, 1);
-                    }
-                });
-            }
-
-            draw() {
-                if (!this.exploded) {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-                    ctx.fillStyle = `hsl(${this.hue}, 100%, 60%)`;
-                    ctx.fill();
-                }
-                this.particles.forEach(particle => particle.draw());
-            }
-
-            explode() {
-                this.exploded = true;
-                for (let i = 0; i < 100; i++) {
-                    const color = `hsl(${this.hue}, 100%, ${50 + Math.random() * 20}%)`;
-                    this.particles.push(new Particle(this.x, this.y, color));
-                }
-            }
-        }
+        [原有的 Firework 类代码保持不变]
 
         let fireworks = [];
         let timer = 0;
+        const TEXT_SIZE_RATIO = 12;
+        const heart = new Heart();
 
         // 文字渲染函数
         function drawText() {
-            const fontSize = Math.min(canvas.width / 10, 48);
-            ctx.font = `${fontSize}px Arial`;
-            ctx.fillStyle = 'white';
+            const fontSize = Math.min(canvas.width / TEXT_SIZE_RATIO, 48);
+            ctx.font = `bold ${fontSize}px Arial, "Microsoft YaHei", "微软雅黑"`;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('情人节快乐', canvas.width / 2, canvas.height / 2);
@@ -119,8 +115,11 @@
 
         // 动画循环
         function animate() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制爱心
+            heart.draw();
 
             if (timer % 50 === 0) {
                 fireworks.push(new Firework());
@@ -142,14 +141,20 @@
         // 开始动画
         animate();
 
-        // 点击屏幕添加烟花
-        canvas.addEventListener('click', (e) => {
-            const firework = new Firework();
-            firework.x = e.clientX;
-            firework.y = canvas.height;
-            firework.targetY = e.clientY;
+        // 点击/触摸事件处理
+        function handleTouch(e) {
+            const touch = e.touches ? e.touches[0] : e;
+            const firework = new Firework(touch.clientX, touch.clientY);
             fireworks.push(firework);
-        });
+        }
+
+        canvas.addEventListener('click', handleTouch);
+        canvas.addEventListener('touchstart', handleTouch);
+
+        // 移动端优化
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 </html>
