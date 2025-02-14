@@ -31,7 +31,6 @@
             text-align: center;
             pointer-events: none;
             z-index: 1;
-            white-space: nowrap;
         }
         .floating-hearts {
             position: fixed;
@@ -52,45 +51,13 @@
             animation: float 3s ease-in-out infinite;
             opacity: 0.6;
         }
-        /* 横屏提示样式 */
-        .orientation-message {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 1000;
-        }
-        @media screen and (orientation: portrait) {
-            .orientation-message {
-                display: block;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="mobile-hint">点击屏幕任意位置可以发射烟花</div>
-    <div class="orientation-message">请将手机横屏以获得最佳体验</div>
     <div id="floating-hearts"></div>
     <canvas id="canvas"></canvas>
     <script>
-        // 强制横屏
-        function lockLandscape() {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(function(error) {
-                    console.log('横屏锁定失败:', error);
-                });
-            }
-        }
-
-        // 尝试锁定横屏
-        lockLandscape();
-
         function createFloatingHearts() {
             const container = document.getElementById('floating-hearts');
             const screenWidth = window.innerWidth;
@@ -125,22 +92,8 @@
             constructor(x, y, hue) {
                 this.x = x;
                 this.y = y;
-                
-                // 调整粒子大小以适应横屏
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const distanceFromCenter = Math.sqrt(
-                    Math.pow(x - centerX, 2) + 
-                    Math.pow(y - centerY, 2)
-                );
-                const maxDistance = Math.sqrt(
-                    Math.pow(canvas.width / 2, 2) + 
-                    Math.pow(canvas.height / 2, 2)
-                );
-                const sizeFactor = 1 - (distanceFromCenter / maxDistance) * 0.5;
-                
                 this.initialSize = Math.random() * 10 + 8;
-                this.maxSize = this.initialSize * 1.5 * sizeFactor;
+                this.maxSize = this.initialSize * 1.5;
                 this.currentSize = 0;
                 this.growthSpeed = 0.2;
                 this.growing = true;
@@ -150,13 +103,11 @@
                 this.alpha = 1;
                 this.decay = Math.random() * 0.003 + 0.002;
                 
-                // 调整粒子速度和方向
                 this.angle = Math.random() * Math.PI * 2;
-                const baseVelocity = Math.random() * 3 + 2; // 降低基础速度
-                this.velocity = baseVelocity * sizeFactor;
+                this.velocity = Math.random() * 3 + 2;
                 this.velocityX = Math.cos(this.angle) * this.velocity;
                 this.velocityY = Math.sin(this.angle) * this.velocity;
-                this.gravity = 0.02; // 降低重力
+                this.gravity = 0.02;
                 this.friction = 0.995;
                 
                 this.rotation = Math.random() * Math.PI * 2;
@@ -179,23 +130,8 @@
                 this.velocityX *= this.friction;
                 this.velocityY *= this.friction;
                 this.velocityY += this.gravity;
-
-                // 边界检查
-                const nextX = this.x + this.velocityX;
-                const nextY = this.y + this.velocityY;
-                const margin = this.maxSize;
-
-                if (nextX < margin || nextX > canvas.width - margin) {
-                    this.velocityX *= -0.5;
-                } else {
-                    this.x = nextX;
-                }
-
-                if (nextY < margin || nextY > canvas.height - margin) {
-                    this.velocityY *= -0.5;
-                } else {
-                    this.y = nextY;
-                }
+                this.x += this.velocityX;
+                this.y += this.velocityY;
 
                 this.rotation += this.rotationSpeed;
 
@@ -255,20 +191,7 @@
             }
 
             explode() {
-                // 根据位置调整粒子数量
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const distanceFromCenter = Math.sqrt(
-                    Math.pow(this.x - centerX, 2) + 
-                    Math.pow(this.y - centerY, 2)
-                );
-                const maxDistance = Math.sqrt(
-                    Math.pow(canvas.width / 2, 2) + 
-                    Math.pow(canvas.height / 2, 2)
-                );
-                const particleFactor = 1 - (distanceFromCenter / maxDistance) * 0.5;
-                const particleCount = Math.floor(30 + 20 * particleFactor);
-                
+                const particleCount = 30;
                 for (let i = 0; i < particleCount; i++) {
                     this.particles.push(new HeartParticle(this.x, this.y, this.hue));
                 }
